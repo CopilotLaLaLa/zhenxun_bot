@@ -94,13 +94,12 @@ class ConfigsManager:
             del self._data[module]
         self.save()
 
-    def set_config(self, module: str, key: str, value:  Any , save_simple_data: bool = False):
+    def set_config(self, module: str, key: str, value: str):
         """
         设置配置值
         :param module: 模块名
         :param key: 配置名称
         :param value: 值
-        :param save_simple_data: 同时保存至config.yaml
         """
         if module in self._data.keys():
             if (
@@ -109,7 +108,7 @@ class ConfigsManager:
             ):
                 self._data[module][key]["value"] = value
                 self._simple_data[module][key] = value
-                self.save(save_simple_data = save_simple_data)
+                self.save()
 
     def set_help(self, module: str, key: str, help_: str):
         """
@@ -123,7 +122,7 @@ class ConfigsManager:
                 self._data[module][key]["help"] = help_
                 self.save()
 
-    def set_default_value(self, module: str, key: str, value:  Any):
+    def set_default_value(self, module: str, key: str, value: str):
         """
         设置配置默认值
         :param module: 模块名

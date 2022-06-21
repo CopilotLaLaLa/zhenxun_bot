@@ -1,10 +1,9 @@
-from utils.message_builder import image, at, face
-from typing import Tuple
+from utils.message_builder import image, at
 from ._rule import check
 from .model import WordBank
 from configs.path_config import DATA_PATH
 from nonebot.adapters.onebot.v11 import GroupMessageEvent
-from utils.utils import get_message_at, get_message_img, change_img_md5
+from utils.utils import get_message_at, get_message_img
 from nonebot import on_message
 from models.group_member_info import GroupInfoUser
 from utils.utils import get_message_img_file, is_number
@@ -24,16 +23,16 @@ async def _(event: GroupMessageEvent):
     list_img = get_message_img_file(event.json())
     if list_img:
         for img_file in list_img:
-            strinfo = re.compile(f"{img_file},.*?]")
+            strinfo = re.compile(f"{img_file},subType=\d*]")
             msg = strinfo.sub(f'{img_file}]', msg)
-    strinfo_face = re.compile(f",type=sticker]")
-    msg = strinfo_face.sub(f']', msg)
-    q = await WordBank.check(event.group_id, msg, )
+    q = await WordBank.check(
+        event.group_id, msg, event.is_tome()
+    )
     await message_handle.send(await get_one_answer(event, q.format, q.answer))
 
 
 # 处理单条回答
-async def get_one_answer(event, format: str, _answer: str, all: bool = True) -> str:
+async def get_one_answer(event, format, _answer, all=1):
     path = data_dir / f"{event.group_id}"
     placeholder_list = (
         [
@@ -51,13 +50,12 @@ async def get_one_answer(event, format: str, _answer: str, all: bool = True) -> 
     else:
         for idx, placeholder in placeholder_list:
             if placeholder.endswith("jpg"):
-                change_img_md5(path / placeholder)
                 answer += _a[: _a.find(f"[__placeholder_{idx}]")] + image(
                     path / placeholder
                 )
             else:
-                if all:
-                    answer += _a[: _a.find(f"[__placeholder_{idx}]")] + at(int(placeholder))
+                if all == 1:
+                    answer += _a[: _a.find(f"[__placeholder_{idx}]")] + at(placeholder)
                 else:
                     q = await GroupInfoUser.get_member_info(
                         int(placeholder), event.group_id)
@@ -67,7 +65,7 @@ async def get_one_answer(event, format: str, _answer: str, all: bool = True) -> 
 
 
 # 处理单条问题
-async def get_one_problem(event, problem: str, ) -> Tuple[str, str]:
+async def get_one_problem(event, problem):
     strinfo = re.compile(f",subType=\d")
     problem = strinfo.sub('', problem)
     _problem = problem
@@ -95,7 +93,7 @@ async def get_one_problem(event, problem: str, ) -> Tuple[str, str]:
 
 
 # 显示单条数据库问题
-async def get_one_image_problem(event, problem: str) -> str:
+async def get_one_image_problem(event, problem):
     path = data_dir / f"{event.group_id}" / "problem"
     placeholder_list = []
     idx = 0
@@ -129,19 +127,3 @@ async def get_one_image_problem(event, problem: str) -> str:
             _p = _p[_p.find(f"[__placeholder_{idx}]") + len(f"[__placeholder_{idx}]"):]
 
     return problem + _p
-
-
-# 替换cq码
-async def replace_cq(group_id, msg: str, is_face: bool = True) -> str:
-    strinfo_img = re.compile(f"\[CQ:image.*?]")
-    msg = strinfo_img.sub('[图片]', msg)
-    at_list = re.findall(rf"\[CQ:at,qq=(.*?)]", msg)
-    if at_list:
-        for ats in at_list:
-            q = await GroupInfoUser.get_member_info(
-                int(ats), group_id)
-            msg = msg.replace(f'[CQ:at,qq={ats}]', "@" + q.user_name)
-    if is_face:
-        strinfo_face = re.compile(f"\[CQ:face,id=.*?]")
-        msg = strinfo_face.sub('[表情]', msg)
-    return msg

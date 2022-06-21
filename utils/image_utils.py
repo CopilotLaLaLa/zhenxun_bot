@@ -14,8 +14,6 @@ from imagehash import ImageHash
 from matplotlib import pyplot as plt
 from PIL import Image, ImageDraw, ImageFile, ImageFilter, ImageFont
 
-from services import logger
-
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 Image.MAX_IMAGE_PIXELS = None
 
@@ -211,16 +209,13 @@ class BuildImage:
                     (self.w, self.h), Image.ANTIALIAS
                 )
         if is_alpha:
-            try:
-                array = self.markImg.load()
-                for i in range(w):
-                    for j in range(h):
-                        pos = array[i, j]
-                        is_edit = sum([1 for x in pos[0:3] if x > 240]) == 3
-                        if is_edit:
-                            array[i, j] = (255, 255, 255, 0)
-            except Exception as e:
-                logger.warning(f"背景透明化发生错误..{type(e)}：{e}")
+            array = self.markImg.load()
+            for i in range(w):
+                for j in range(h):
+                    pos = array[i, j]
+                    is_edit = sum([1 for x in pos[0:3] if x > 240]) == 3
+                    if is_edit:
+                        array[i, j] = (255, 255, 255, 0)
         self.draw = ImageDraw.Draw(self.markImg)
         self.size = self.w, self.h
         if plain_text:
@@ -686,10 +681,7 @@ class BuildImage:
             right, bottom = [(value - offset) * antialias for value in ellipse_box[2:]]
             draw.ellipse([left, top, right, bottom], fill=fill)
         mask = mask.resize(self.markImg.size, Image.LANCZOS)
-        try:
-            self.markImg.putalpha(mask)
-        except ValueError:
-            pass
+        self.markImg.putalpha(mask)
 
     async def acircle_corner(self, radii: int = 30):
         """
@@ -1507,7 +1499,7 @@ async def text2image(
             w, _ = _tmp.getsize(x.strip() or "正")
             height += h + line_height
             width = width if width > w else w
-            image_list.append(BuildImage(w, h, font=font, font_size=font_size, plain_text=x.strip(), color=color))
+            image_list.append(BuildImage(w, h, font=font, font_size=font_size, plain_text=x.strip()))
         width += pw
         height += ph
         A = BuildImage(
